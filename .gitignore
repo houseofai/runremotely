@@ -8,3 +8,4 @@ requirements.txt
 Test.ipynb
 .DS_Store
 temp
+tmp
