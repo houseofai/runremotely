@@ -155,7 +155,7 @@ class Compute:
         try:
             # Run script remotely
             self.__remote_exec(["chmod 700 run.sh","./run.sh"])
-
+            self.__transferfrom(self.filesfrom)
             return self.__load("model")
         except (KeyboardInterrupt, SystemExit, Exception) as e:
             print(e)
@@ -179,7 +179,7 @@ class Compute:
         for f in files:
             print("Retrieving [{}] from ec2".format(f))
             base=os.path.basename(f)
-            sftp.get(f, base)
+            sftp.get(base, f)
         self.sshclient.close()
 
     ### Code from pipreqsnb ######

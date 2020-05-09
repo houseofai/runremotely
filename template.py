@@ -25,7 +25,9 @@ y = load("y")
 print("Fitting the model...")
 model.fit(X,y)
 print("Model:")
-print(model);
+print("Best estimator: {}".format(model.best_estimator_));
+print("Best Params: {}".format(model.best_params_));
+print("Best Score: {}".format(model.best_score_));
 
 print("Saving model...")
 dump(model)
