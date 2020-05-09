@@ -5,12 +5,12 @@ print("Starting")
 
 def dump(obj):
     with open("model.pickle", 'wb') as f:
-        dill.dump(obj, f)
+        pickle.dump(obj, f)
 
 def load(name):
     fname = "{}.pickle".format(name)
     with open(fname, 'rb') as f:
-        return dill.load(f)
+        return pickle.load(f)
 
 
 print("Loading model...")

@@ -11,7 +11,7 @@ import ast
 import pickle
 import signal
 import sys
-
+import pathlib
 
 
 class Compute:
@@ -21,6 +21,9 @@ class Compute:
         self.keyname = keyname
         if self.keyname is None:
             self.keyname = 'ec2-keypair-'+time.strftime("%Y%m%d-%H%M%S")
+
+        self.tmpdir ="./temp"
+        pathlib.Path(self.tmpdir).mkdir(parents=True, exist_ok=True)
 
         self.filesto = set(["run.sh"])
         self.filesfrom = set([])
@@ -34,8 +37,8 @@ class Compute:
         try :
             key_pair = self.client.create_key_pair(KeyName=self.keyname)
             KeyPairOut = str(key_pair['KeyMaterial'])
-            print("Key: {}".format(KeyPairOut))
-            f = open(self.keyname+'.pem','w')
+            #print("Key: {}".format(KeyPairOut))
+            f = open(self.tmpdir+"/"+self.keyname+'.pem','w')
             f.write(KeyPairOut)
             f.close()
             print("Key pair created!")
@@ -81,16 +84,16 @@ class Compute:
         #    GroupId=sg_id)
 
         # Init SSH Client
-        self.RSAkey = paramiko.RSAKey.from_private_key_file(self.keyname+".pem")
+        self.RSAkey = paramiko.RSAKey.from_private_key_file(self.tmpdir+"/"+self.keyname+".pem")
         self.sshclient = paramiko.SSHClient()
         self.sshclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         # Generate requirements
-        print("Generating project Python requirements...")
+        print("Generating project Python requirements")
         nb_name = ipyparams.notebook_name
-        os.system("pipreqsnb .")
-        self.__addfile("requirements.txt")
-        print("requirements.txt generated!")
+        os.system("pipreqsnb . --savepath "+self.tmpdir+"/requirements.txt")
+        self.__addfile(self.tmpdir+"/"+"requirements.txt")
+        #print("requirements.txt generated!")
 
     def __addfile(self, name, retrieve=False):
         self.filesto.add(name)
@@ -108,47 +111,55 @@ class Compute:
             print("Error: {}".format(stderr.read().decode('unicode_escape')))
         self.sshclient.close()
 
-    def fullclean(self):
+    def terminate(self):
         print("Deleting remote key pair...")
         self.client.delete_key_pair(KeyName=self.keyname)
         #self.resource.instances.filter(InstanceIds = [instanceId]).terminate()
         print("Terminate EC2 instance [{}]...".format(self.instance.id))
         self.instance.terminate()
         print("Delete local key pair file...")
-        os.remove(self.keyname+".pem")
+        os.remove(self.tmpdir+"/"+self.keyname+".pem")
         print("Done!")
 
     def fit(self, model,X,y):
         try:
             fmodel = self.__dump(model, "model")
-            self.__addfile(fmodel, retrieve=True)
+            self.__addfile(self.tmpdir+"/"+fmodel, retrieve=True)
 
             fX = self.__dump(X, "X")
-            self.__addfile(fX)
+            self.__addfile(self.tmpdir+"/"+fX)
 
             fy = self.__dump(y, "y")
-            self.__addfile(fy)
+            self.__addfile(self.tmpdir+"/"+fy)
 
             imports_nb = self.__get_imports()
             fin = open("template.py", "rt")
-            fout = open("model.py", "wt")
+            fout = open(self.tmpdir+"/"+"model.py", "wt")
             for line in fin:
                 fout.write(line.replace("{IMPORTS}", imports_nb))
             fin.close()
             fout.close()
 
-            self.__addfile("model.py")
+            self.__addfile(self.tmpdir+"/"+"model.py")
 
             # Tranfering all files to ec2
             self.__transferto(self.filesto)
-
-            # Run script remotely
-            self.__remote_exec(["chmod 700 run.sh | ./run.sh"])
-
-            #return self.__load("model")
-        except (KeyboardInterrupt, SystemExit, Exception) as e:
-            print("Something went wrong. Cleaning")
+#        except NoValidConnectionsError as ne:
+#            print("Error while connecting. Maybe too soon? Wait a couple of seconds for the instance to turn on")
+#            print(e)
+        except Exception as e:
+            print("Error while preparing files")
             print(e)
+            raise
+
+        try:
+            # Run script remotely
+            self.__remote_exec(["chmod 700 run.sh","./run.sh"])
+
+            return self.__load("model")
+        except (KeyboardInterrupt, SystemExit, Exception) as e:
+            print(e)
+            print("Stopping remote processes. (run terminate to destroy the ec2 instance)")
             self.__remote_exec(["pgrep run.sh | xargs pkill -9 -P"])
             sys.exit(0)
 
@@ -158,7 +169,8 @@ class Compute:
         sftp = self.sshclient.open_sftp()
         for f in files:
             print("Transfering [{}] to ec2".format(f))
-            sftp.put(f, f)
+            base=os.path.basename(f)
+            sftp.put(f, base)
         self.sshclient.close()
 
     def __transferfrom(self, files):
@@ -166,7 +178,8 @@ class Compute:
         sftp = self.sshclient.open_sftp()
         for f in files:
             print("Retrieving [{}] from ec2".format(f))
-            sftp.get(f, f)
+            base=os.path.basename(f)
+            sftp.get(f, base)
         self.sshclient.close()
 
     ### Code from pipreqsnb ######
@@ -205,12 +218,12 @@ class Compute:
     def __dump(self, obj,name):
         fname = "{}.pickle".format(name)
         print("Saving {}".format(fname))
-        with open(fname, 'wb') as f:
+        with open(self.tmpdir+"/"+fname, 'wb') as f:
             pickle.dump(obj, f)
         return fname
 
     def __load(self, name):
         fname = "{}.pickle".format(name)
         print("Loading {}".format(fname))
-        with open(fname, 'rb') as f:
+        with open(self.tmpdir+"/"+fname, 'rb') as f:
             return pickle.load(f)
