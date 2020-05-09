@@ -1,3 +1,8 @@
 computecheap.egg-info
 
 dist
+.ipynb_checkpoints
+__pycache__
+data
+requirements.txt
+Test.ipynb

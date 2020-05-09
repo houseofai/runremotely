@@ -6,6 +6,9 @@ import boto3
 import botocore.exceptions as ex
 import os
 import time
+import json
+import ast
+import pickle
 
 class ComputeCheap:
     def __init__(self, keyname=None):
@@ -14,6 +17,9 @@ class ComputeCheap:
         self.keyname = keyname
         if self.keyname is None:
             self.keyname = 'ec2-keypair-'+time.strftime("%Y%m%d-%H%M%S")
+
+        self.filesto = set(["run.sh"])
+        self.filesfrom = set([])
         self.instance = None
         self.sshclient = None
         self.RSAkey = None
@@ -79,14 +85,21 @@ class ComputeCheap:
         print("Generating project Python requirements...")
         nb_name = ipyparams.notebook_name
         os.system("pipreqsnb .")
+        self.__addfile("requirements.txt")
         print("requirements.txt generated!")
 
+    def __addfile(self, name, retrieve=False):
+        self.filesto.add(name)
+        if retrieve:
+            self.filesfrom.add(name)
 
-    def remote_exec(self, command):
+
+    def __remote_exec(self, command):
         self.sshclient.connect(hostname=self.instance.public_ip_address, username="ec2-user", pkey=self.RSAkey)
+        print("Executing [{}]".format(command))
         stdin, stdout, stderr = self.sshclient.exec_command(command)
         #print(stdin.read())
-        print("Out: {}".format(stdout.read()))
+        print("Out: {}".format(stdout.read().decode('unicode_escape')))
         print("Error: {}".format(stderr.read()))
         self.sshclient.close()
 
@@ -100,30 +113,101 @@ class ComputeCheap:
         os.remove(self.keyname+".pem")
         print("Done!")
 
+    def fit(self, model,X,y):
+        try:
+            fmodel = self.__dump(model, "model")
+            self.__addfile(fmodel, retrieve=True)
 
-import sys
-from types import ModuleType, FunctionType
-from gc import get_referents
+            fX = self.__dump(X, "X")
+            self.__addfile(fX)
 
-# Custom objects know their class.
-# Function objects seem to know way too much, including modules.
-# Exclude modules as well.
-BLACKLIST = type, ModuleType, FunctionType
+            fy = self.__dump(y, "y")
+            self.__addfile(fy)
+
+            imports_nb = self.__get_imports()
+            fin = open("template.py", "rt")
+            fout = open("model.py", "wt")
+            for line in fin:
+                fout.write(line.replace("{IMPORTS}", imports_nb))
+            fin.close()
+            fout.close()
+
+            self.__addfile("model.py")
+
+            # Tranfering all files to ec2
+            self.__transferto(self.filesto)
+
+            # Run script remotely
+            self.__remote_exec("chmod 700 run.sh")
+            self.__remote_exec("./run.sh")
+
+            ## Remove instance and keys
+            #self.__fullclean()
+
+            #return self.__load("model")
+        except Exception as e:
+            print("Something went wrong. Cleaning")
+            print(e)
+            #self.__fullclean()
+
+    def __transferto(self, files):
+        self.sshclient.connect(hostname=self.instance.public_ip_address, username="ec2-user", pkey=self.RSAkey)
+        sftp = self.sshclient.open_sftp()
+        for f in files:
+            print("Transfering [{}] to ec2".format(f))
+            sftp.put(f, f)
+        self.sshclient.close()
+
+    def __transferfrom(self, files):
+        self.sshclient.connect(hostname=self.instance.public_ip_address, username="ec2-user", pkey=self.RSAkey)
+        sftp = self.sshclient.open_sftp()
+        for f in files:
+            print("Retrieving [{}] from ec2".format(f))
+            sftp.get(f, f)
+        self.sshclient.close()
+
+    ### Code from pipreqsnb ######
+    def __get_imports(self):
+        imports = []
+        nb_file = ipyparams.notebook_name
+        nb = json.load(open(nb_file, 'r'))
+        for cell in nb['cells']:
+            if cell['cell_type'] == 'code':
+                valid_lines = self.__clean_invalid_lines_from_list_of_lines(cell['source'])
+                source = ''.join(valid_lines)
+                if "computecheap" not in source:
+                    imports += self.__get_import_string_from_source(source)
+
+        return '\n'.join(imports)
 
 
-def getsize(obj):
-    """sum size of object & members."""
-    if isinstance(obj, BLACKLIST):
-        raise TypeError('getsize() does not take argument of type: '+ str(type(obj)))
-    seen_ids = set()
-    size = 0
-    objects = [obj]
-    while objects:
-        need_referents = []
-        for obj in objects:
-            if not isinstance(obj, BLACKLIST) and id(obj) not in seen_ids:
-                seen_ids.add(id(obj))
-                size += sys.getsizeof(obj)
-                need_referents.append(obj)
-        objects = get_referents(*need_referents)
-    return size
+    def __clean_invalid_lines_from_list_of_lines(self, list_of_lines):
+        invalid_starts = ['!', '%']
+        valid_python_lines = []
+        for line in list_of_lines:
+            if not any([line.startswith(x) for x in invalid_starts]):
+                valid_python_lines.append(line)
+        return valid_python_lines
+
+    def __get_import_string_from_source(self, source):
+        imports = []
+        splitted = source.splitlines()
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if any([isinstance(node, ast.Import), isinstance(node, ast.ImportFrom)]):
+                imports.append(splitted[node.lineno - 1])
+        return imports
+    ############################
+
+    def __dump(self, obj,name):
+        fname = "{}.pickle".format(name)
+        print("Saving {}".format(fname))
+        with open(fname, 'wb') as f:
+            pickle.dump(obj, f)
+        return fname
+
+    def __load(self, name):
+        fname = "{}.pickle".format(name)
+        print("Loading {}".format(fname))
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
