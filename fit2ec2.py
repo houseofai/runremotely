@@ -9,8 +9,12 @@ import time
 import json
 import ast
 import pickle
+import signal
+import sys
 
-class ComputeCheap:
+
+
+class Compute:
     def __init__(self, keyname=None):
         self.resource = boto3.resource('ec2')
         self.client = boto3.client('ec2')
@@ -94,13 +98,14 @@ class ComputeCheap:
             self.filesfrom.add(name)
 
 
-    def __remote_exec(self, command):
+    def __remote_exec(self, commands):
         self.sshclient.connect(hostname=self.instance.public_ip_address, username="ec2-user", pkey=self.RSAkey)
-        print("Executing [{}]".format(command))
-        stdin, stdout, stderr = self.sshclient.exec_command(command)
-        #print(stdin.read())
-        print("Out: {}".format(stdout.read().decode('unicode_escape')))
-        print("Error: {}".format(stderr.read()))
+        for command in commands:
+            print("Executing [{}]".format(command))
+            stdin, stdout, stderr = self.sshclient.exec_command(command)
+            #print(stdin.read())
+            print("Out: {}".format(stdout.read().decode('unicode_escape')))
+            print("Error: {}".format(stderr.read().decode('unicode_escape')))
         self.sshclient.close()
 
     def fullclean(self):
@@ -138,17 +143,15 @@ class ComputeCheap:
             self.__transferto(self.filesto)
 
             # Run script remotely
-            self.__remote_exec("chmod 700 run.sh")
-            self.__remote_exec("./run.sh")
-
-            ## Remove instance and keys
-            #self.__fullclean()
+            self.__remote_exec(["chmod 700 run.sh | ./run.sh"])
 
             #return self.__load("model")
-        except Exception as e:
+        except (KeyboardInterrupt, SystemExit, Exception) as e:
             print("Something went wrong. Cleaning")
             print(e)
-            #self.__fullclean()
+            self.__remote_exec(["pgrep run.sh | xargs pkill -9 -P"])
+            sys.exit(0)
+
 
     def __transferto(self, files):
         self.sshclient.connect(hostname=self.instance.public_ip_address, username="ec2-user", pkey=self.RSAkey)
@@ -175,7 +178,7 @@ class ComputeCheap:
             if cell['cell_type'] == 'code':
                 valid_lines = self.__clean_invalid_lines_from_list_of_lines(cell['source'])
                 source = ''.join(valid_lines)
-                if "computecheap" not in source:
+                if "fit2ec2" not in source:
                     imports += self.__get_import_string_from_source(source)
 
         return '\n'.join(imports)
