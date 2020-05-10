@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="fit2ec2", # Replace with your own username
-    version="0.0.1",
+    version="0.1.0",
     author="Odyssée",
     author_email="otremoulis@gmail.com",
     description="Automatically launch AWS ec2 instance to fit your ML model.",

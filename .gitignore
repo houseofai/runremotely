@@ -1,11 +1,5 @@
 computecheap.egg-info
-
 dist
 .ipynb_checkpoints
 __pycache__
-data
-requirements.txt
-Test.ipynb
 .DS_Store
-temp
-tmp

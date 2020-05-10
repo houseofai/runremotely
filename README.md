@@ -1,6 +1,13 @@
-# compute-cheap
+# fit2ec2
 
-Python library to execute Jupyter Notebook remotely on EC2 instance
+**fit2ec2 help fitting your model on an ec2 instance.**
+It's simple to use:
+1. It turns on the ec2 instance
+2. Run your model on it
+3. Send you the model back
+4. Terminate the ec2 instance
+
+As an example:
 
 
 ## Prerequisites
