@@ -35,7 +35,7 @@ class SSHClient():
         self.__sshconnect()
         for command in commands:
             print("Executing [{}]".format(command))
-            stdin, stdout, stderr = self.client.exec_command(command, get_pty=True)
+            stdin, stdout, stderr = self.client.exec_command(command)
             if display:
                 for line in stdout.read().splitlines():
                     print(line.decode('unicode_escape'))
@@ -46,7 +46,7 @@ class SSHClient():
             errormsg = stderr.read().decode('unicode_escape')
             if errormsg is not '':
                 print("Error: {}".format(errormsg))
-                
+
         self.client.close()
 
     def __get_sftp(self):

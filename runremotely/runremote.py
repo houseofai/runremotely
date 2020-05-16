@@ -15,7 +15,7 @@ from runremotely.server import ec2, sshclient, filemanager, requirements
 
 init_cmd = ["sudo yum -y install python37","curl -O https://bootstrap.pypa.io/get-pip.py","sudo  python3 get-pip.py --user", "sudo python3 -m pip install cloudpickle"]
 
-def runremotely(context, instancetype=None, imageId=None, test=True):
+def runremotely(context, instance=None, imageId=None, test=True):
     def decorate(func):
 
         def wrapper(*args, **kwargs):
@@ -26,20 +26,20 @@ def runremotely(context, instancetype=None, imageId=None, test=True):
             # Serialize the function
             func_path = filemanager.dump(func)
 
-            serverInstance = ec2.Instance()#imageId, instancetype)
+            serverInstance = ec2.Instance(instanceType=instance)#imageId, instance)
 
             try:
                 ssh = sshclient.SSHClient(serverInstance.instance.public_ip_address, serverInstance.private_key)
 
                 ssh.send_files([func_path, "../template.py", req_file])
                 ssh.run(init_cmd, display=False)
-                ssh.run(["sudo python3 -m pip install -r *.reqs", "sudo python3 template.py"])
+                ssh.run(["sudo python3 -m pip install -r *.reqs --progress-bar off", "sudo python3 template.py"])
                 output = ssh.get_files("result.pickle")
                 # Deserialize
                 return filemanager.loads(output)
             finally:
                 print("")
-                #serverInstance.terminate()
+                serverInstance.terminate()
 
 
         return wrapper

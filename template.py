@@ -1,4 +1,4 @@
-import pickle
+import pickle, cloudpickle
 import glob
 
 print("Starting")
