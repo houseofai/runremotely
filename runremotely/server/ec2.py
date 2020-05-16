@@ -1,5 +1,3 @@
-
-
 import boto3
 import botocore.exceptions as ex
 import os
@@ -12,9 +10,10 @@ class Instance():
     sleep_time_after_creation = 5
     userdata = '''#!/bin/bash
         PATH=$PATH:~/.local/bin
-        sudo yum -y install python37
+        yum -y install python37
         curl -O https://bootstrap.pypa.io/get-pip.py
         python3 get-pip.py --user
+        python3 -m pip install cloudpickle
         '''
 
     def __init__(self, imageId='ami-06ce3edf0cff21f07', instanceType='t2.micro'):
@@ -34,7 +33,7 @@ class Instance():
             MaxCount=1,
             InstanceType=instanceType,
             KeyName=os.path.basename(self.private_key),
-            UserData=self.userdata
+            #UserData=self.userdata
         )
 
         while True:
@@ -51,8 +50,8 @@ class Instance():
 
     def __create_key_pair(self):
         # Create key pair
-        print("Creating key pair")
         fd, self.private_key = tempfile.mkstemp(suffix = '.tp')
+        print("Creating key pair [{}]".format(self.private_key))
         try :
             key_pair = self.client.create_key_pair(KeyName=os.path.basename(self.private_key))
             private_key = str(key_pair['KeyMaterial'])

@@ -1,34 +1,18 @@
-{IMPORTS}
 import pickle
+import glob
 
 print("Starting")
 
-def dump(obj):
-    with open("model.pickle", 'wb') as f:
-        pickle.dump(obj, f)
+picklefiles = glob.glob("/home/ec2-user/*.tp")
+print("[remote] Loading function {}".format(picklefiles[0]))
+# Load on remote server
+with open(picklefiles[0], 'rb') as f:
+    exec_model = pickle.load(f)
 
-def load(name):
-    fname = "{}.pickle".format(name)
-    with open(fname, 'rb') as f:
-        return pickle.load(f)
+print("Model Loaded")
 
+response = exec_model()#*args, **kwargs)
 
-print("Loading model...")
-model = load("model")
-print(model)
+print("Dumping the result")
 
-print("Loading X data...")
-X = load("X")
-print("Loading y data...")
-y = load("y")
-
-print("Fitting the model...")
-model.fit(X,y)
-print("Model:")
-print("Best estimator: {}".format(model.best_estimator_));
-print("Best Params: {}".format(model.best_params_));
-print("Best Score: {}".format(model.best_score_));
-
-print("Saving model...")
-dump(model)
-print("Done!")
+output = cloudpickle.dumps("result.pickle")

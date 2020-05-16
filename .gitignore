@@ -3,3 +3,5 @@ dist
 .ipynb_checkpoints
 __pycache__
 .DS_Store
+catboost_info
+catboost_info
