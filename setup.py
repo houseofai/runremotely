@@ -18,4 +18,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
+    package_dir={'runremotely':
+                 'runremotely'},
 )
