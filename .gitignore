@@ -4,4 +4,8 @@ dist
 __pycache__
 .DS_Store
 catboost_info
-catboost_info
+result.pickle
+test.ipynb
+test/test.ipynb
+test/catboost_info
+test/result.pickle

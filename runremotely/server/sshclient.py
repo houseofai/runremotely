@@ -37,10 +37,10 @@ class SSHClient():
             print("Executing [{}]".format(command))
             stdin, stdout, stderr = self.client.exec_command(command)
             if display:
-                for line in stdout.read().splitlines():
-                    print(line.decode('unicode_escape'))
-            #for line in iter(lambda: stdout.readline(2048), ""):
-            #    print(line, end="")
+                #for line in stdout.read().splitlines():
+                #    print(line.decode('unicode_escape'))
+                for line in iter(lambda: stdout.readline(1024), ""):
+                    print(line, end="")
 
             #print("Out: {}".format(stdout.read().decode('unicode_escape')))
             errormsg = stderr.read().decode('unicode_escape')
@@ -65,6 +65,5 @@ class SSHClient():
         sftp = self.__get_sftp()
         print("Retrieving [{}] from ec2".format(file))
         base=os.path.basename(file)
-        result_file = sftp.get(base, file)
+        sftp.get(base, file)
         self.client.close()
-        return result_file

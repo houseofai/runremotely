@@ -1,4 +1,4 @@
-import pickle, cloudpickle
+import pickle
 import glob
 
 print("Starting")
@@ -9,10 +9,9 @@ print("[remote] Loading function {}".format(picklefiles[0]))
 with open(picklefiles[0], 'rb') as f:
     exec_model = pickle.load(f)
 
-print("Model Loaded")
+print("[remote] Model Loaded")
 
 response = exec_model()#*args, **kwargs)
 
-print("Dumping the result")
-
-output = cloudpickle.dumps("result.pickle")
+print("[remote] Dumping the result")
+pickle.dump(response, open("result.pickle", "wb"))

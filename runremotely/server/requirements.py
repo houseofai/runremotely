@@ -1,6 +1,7 @@
 import pkg_resources
 import types
 import tempfile
+from pipreqs import pipreqs as pi
 
 class Requirements():
     def __init__(self, context):
@@ -14,7 +15,7 @@ class Requirements():
             elif isinstance(val, type):
                 imports.append(val.__module__.split(".")[0])
 
-        return list(set(imports))
+        return pi.get_pkg_names(list(set(imports)))
 
     def get_requirements(self):
         requirements = []
@@ -24,12 +25,24 @@ class Requirements():
                 requirements.append((m.project_name, m.version))
         return requirements
 
-    def get_requirements_file(self):
-        requirements = self.get_requirements()
-        reqlines = ""
-        for r in requirements:
-            reqlines += "{}=={}\n".format(*r)
+    def get_formatted_imports(self):
+        candidates = pi.get_pkg_names(self.get_imports())
 
+        pypi_server = "https://pypi.python.org/pypi/"
+        proxy = None
+        local = pi.get_import_local(candidates)
+        # Get packages that were not found locally
+        difference = [x for x in candidates
+                      if x.lower() not in [z['name'].lower() for z in local]]
+        imports = local + pi.get_imports_info(difference,
+                                           proxy=proxy,
+                                           pypi_server=pypi_server)
+        return imports
+
+    def get_requirements_file(self):
+        requirements = self.get_formatted_imports()
+        fmt = '{name}=={version}'
+        formatted_reqs = '\n'.join(fmt.format(**item) if item['version'] else '{name}'.format(**item) for item in requirements) + '\n'
         fd, f = tempfile.mkstemp(suffix = '.reqs')
-        open(f, 'w').write(reqlines)
+        open(f, 'w').write(formatted_reqs)
         return f

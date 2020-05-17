@@ -4,13 +4,13 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="fit2ec2", # Replace with your own username
-    version="0.1.0",
+    name="runremotely",
+    version="0.1.1",
     author="Odyssée",
     author_email="otremoulis@gmail.com",
     description="Automatically launch AWS ec2 instance to fit your ML model.",
     long_description_content_type="text/markdown",
-    url="https://github.com/OdysseeT/fit2ec2",
+    url="https://github.com/OdysseeT/runremotely.git",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
