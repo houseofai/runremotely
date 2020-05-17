@@ -1,16 +1,3 @@
-import ipyparams
-import pipreqsnb
-import sys, os, tempfile, types
-import boto3
-import botocore.exceptions as ex
-import time
-import json
-import ast
-import pickle
-import signal
-import pathlib
-import glob
-
 from runremotely.server import ec2, sshclient, filemanager, requirements
 
 init_cmd = ["sudo yum -y install python37","curl -O https://bootstrap.pypa.io/get-pip.py","sudo  python3 get-pip.py --user", "sudo python3 -m pip install cloudpickle"]
