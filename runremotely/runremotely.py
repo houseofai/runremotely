@@ -18,7 +18,7 @@ def runremotely(context, instance=None, imageId=None, test=True):
             try:
                 ssh = sshclient.SSHClient(serverInstance.instance.public_ip_address, serverInstance.private_key)
 
-                ssh.send_files([func_path, "../template.py", req_file])
+                ssh.send_files([func_path, "template.py", req_file])
                 ssh.run(init_cmd, display=False)
                 ssh.run(["cat *.reqs | xargs -n 1 sudo python3 -m pip install --progress-bar off", "sudo python3 template.py"])
                 ssh.get_files("result.pickle")
