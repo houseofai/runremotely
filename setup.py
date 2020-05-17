@@ -11,6 +11,7 @@ setuptools.setup(
     description="Automatically launch AWS ec2 instance to fit your ML model.",
     long_description_content_type="text/markdown",
     url="https://github.com/OdysseeT/runremotely.git",
+    license="Apache License 2.0",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
