@@ -1,13 +1,13 @@
 # runremotely
 
-**runremotely help fitting your model on an aws ec2 instance.**
+**runremotely help to fit your model on an aws ec2 instance.**
 It's simple to use:
 1. It turns on the ec2 instance
 2. Run the model on it
 3. Send the model back
 4. Terminate the ec2 instance
 
-**Warning:** This package is still under development. Check your AWS Console for any running ec2 instances that might have not been shut down
+**Warning:** This package is still under development. Check your AWS Console for any running ec2 instances that might not have been shut down.
 
 As an example:
 
@@ -26,7 +26,7 @@ grid = execute()
 
 print(grid['params'])
 ```
-See the test folder for the complete example
+See the test folder for the complete example.
 
 
 ## Prerequisites
